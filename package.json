@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "nft.storage": "^7.0.3",
+    "web3.storage": "^4.5.4"
+  }
+}
