@@ -1,0 +1,125 @@
+<div id="filpunk-popup" style="display: none;">
+	<h2 id="popup-h">Congratulations!</h2>
+	<p id="popup-p" data-selectable="true"></p>
+  <img id="popup-img" src="" alt="FPK" width="350" height="350"/>
+</div>
+<script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css"
+/>
+<script src="https://cdn.jsdelivr.net/gh/FilPunks/nft-project@main/abi.js" type="application/javascript">
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script src="https://cdn.jsdelivr.net/npm/party-js@latest/bundle/party.min.js"></script>
+<script>
+const CONTRACT_ADDR = '0x75f92A06E925f6c1245579070186d058114cC7F4'
+var mmS, mmA, mmP, mmTx, mmC, minting = false;
+const C_M = "Connect MetaMask";
+const M_N = "Mint Now";
+var cE = document.getElementById("connect")
+
+I_C = "#0090ff";
+E_C = "#ce2d1f";
+
+function toast(text, time, pos, color) {
+	Toastify({
+  	text: text,
+  	duration: time,
+  	gravity: "top",
+  	position: pos, // `left`, `center` or `right`
+    close: true,
+  	style: {
+      background: color,
+      fontSize: "1.1rem",
+      borderRadius: "20px",
+  	},
+	}).showToast();
+}
+
+cE.onclick = async function() {
+	try {
+  	cE.disabled = true
+  	cE.textContent = "..."
+    mmP = await new ethers.providers.Web3Provider(window.ethereum)
+    await mmP.send("eth_requestAccounts", [])
+  	mmS = mmP.getSigner()
+  	mmA = await mmS.getAddress()
+    if (mmA) {
+  		const st = mmA.slice(0, 5)
+  		const ed = mmA.slice(-5)
+  		cE.textContent = `${st}...${ed}`
+  	}
+    else {
+  		cE.textContent = C_M;
+    }
+		console.log(`addr: ${mmA}`)
+    cE.disabled = false
+    toast("Wallet connected!", 3000, "center", I_C);
+	} catch (error) {
+    console.error("err:", error)
+    cE.textContent = C_M;
+    cE.disabled = false
+    toast(error.message, 4000, "center", E_C);
+  }
+}
+function re()
+{
+	minting = false
+  mE.textContent = M_N
+}
+var mE = document.getElementById("mint-button")
+mE.onclick = async function(event) {
+	if (minting) {
+    toast("Err: Please mint one at a time", 4000, "center", E_C);
+    return
+  }
+  minting = true
+  
+  mE.textContent = "Minting..."
+  const contractData = CONTRACT_ABI
+  const signer = mmS
+  try{
+    const minterAddress = await mmS.getAddress()
+    const balance = await mmP.getBalance(minterAddress)
+    if (balance < 1.99) {
+      toast("Err: Not enough balance", 4000, "center", E_C);
+      re()
+      return
+    }
+    toast("Please confirm your transaction on your wallet...", 8000, "center", I_C);
+  	mmC = new ethers.Contract(CONTRACT_ADDR, contractData, signer)
+  	const options = {value: ethers.utils.parseEther("1.99")}
+  	let transaction = await mmC.mint(1, options)
+    toast("It may take up to minutes for minting process to be completed...", 9000, "center", I_C);
+    toast("Minting FilPunks...", 10000, "center", I_C);
+  	mmTx = await transaction.wait();
+  }	catch(error) {
+  	toast(error.message, 4000, "center", E_C);
+  	re()
+    return
+  }
+	const transferLogs = mmTx.events.filter((event) => {
+  	return event.event === "Transfer";
+	});
+	const tokenId = transferLogs[transferLogs.length - 1].args.tokenId.toString()
+  const tokenUri = await mmC.tokenURI(tokenId)
+  console.log("URI:", tokenUri)
+  const ph2 = document.getElementById("popup-h")
+  ph2.style.color = "#0090ff"
+  ph2.style.marginBottom = '15px';
+  document.getElementById("popup-img").src = `https://bafybeih5tp5mcmdya2reg3pruembinv4kjtfrryhdirzkwe2ready2752u.ipfs.nftstorage.link/${tokenId}.png`
+  const pp = document.getElementById("popup-p")
+  pp.textContent = `You have just minted FilPunk #${tokenId}! Your FilPunk's metadata link is ${tokenUri}. The FPK token you just minted points to this metadata. Please save metadata and image for your own reference as there is no NFT marketplace on Filecoin at the moment!`
+  pp.style.color = "black"
+  pp.style.marginBottom = '15px'
+  Fancybox.show([{ src: "#filpunk-popup", type: "inline", display: "flex" }])
+  re()
+  party.confetti(pp, {
+		count: party.variation.range(35, 45),
+    spread: party.variation.range(30, 40),
+	});
+  toast("Ka-Ching!", 3000, "center", I_C);
+}
+</script>
